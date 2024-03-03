@@ -2,6 +2,7 @@
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Sinks.NewRelic.Logs;
+using Serilog.Sinks.PeriodicBatching;
 using System;
 
 namespace Serilog
@@ -31,6 +32,8 @@ namespace Serilog
             string insertKey = null,
             LogEventLevel restrictedToMinimumLevel = LevelAlias.Minimum,
             int batchSizeLimit = NewRelicLogsSink.DefaultBatchSizeLimit,
+            int queueLimit = NewRelicLogsSink.DefaultQueueLimit,
+            bool eagerlyEmitFirstEvent = NewRelicLogsSink.DefaultEagerlyEmitFirstEvent,
             TimeSpan? period = null
             )
         {
@@ -88,8 +91,15 @@ namespace Serilog
 
             var defaultPeriod = period ?? NewRelicLogsSink.DefaultPeriod;
 
-            ILogEventSink sink = new NewRelicLogsSink(endpointUrl, applicationName, licenseKey, insertKey, batchSizeLimit, defaultPeriod);
-
+            var batchingOptions = new PeriodicBatchingSinkOptions
+            {
+                BatchSizeLimit = batchSizeLimit,
+                Period = defaultPeriod,
+                EagerlyEmitFirstEvent = eagerlyEmitFirstEvent,
+                QueueLimit = queueLimit
+            };
+            var nrSink = new NewRelicLogsSink(endpointUrl, applicationName, licenseKey, insertKey);
+            var sink = new PeriodicBatchingSink(nrSink, batchingOptions);
             return loggerSinkConfiguration.Sink(sink, restrictedToMinimumLevel);
         }
     }

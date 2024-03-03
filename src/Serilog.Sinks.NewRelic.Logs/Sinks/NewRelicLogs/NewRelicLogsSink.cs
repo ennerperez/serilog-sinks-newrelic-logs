@@ -13,10 +13,11 @@ using System.Threading.Tasks;
 
 namespace Serilog.Sinks.NewRelic.Logs
 {
-    internal class NewRelicLogsSink : PeriodicBatchingSink
+    internal class NewRelicLogsSink : IBatchedLogEventSink
     {
         public const int DefaultBatchSizeLimit = 1000;
-
+        public const int DefaultQueueLimit = 1000;
+        public const bool DefaultEagerlyEmitFirstEvent = true;
         public static readonly TimeSpan DefaultPeriod = TimeSpan.FromSeconds(2);
 
         public string EndpointUrl { get; }
@@ -34,10 +35,7 @@ namespace Serilog.Sinks.NewRelic.Logs
             string applicationName, 
             string licenseKey, 
             string insertKey, 
-            int batchSizeLimit, 
-            TimeSpan period, 
             IFormatProvider formatProvider = null)
-            : base(batchSizeLimit, period)
         {
             this.EndpointUrl = endpointUrl;
             this.ApplicationName = applicationName;
@@ -46,7 +44,7 @@ namespace Serilog.Sinks.NewRelic.Logs
             this.FormatProvider = formatProvider;
         }
 
-        protected override async Task EmitBatchAsync(IEnumerable<LogEvent> eventsEnumerable)
+        public async Task EmitBatchAsync(IEnumerable<LogEvent> eventsEnumerable)
         {
             var payload = new NewRelicLogPayload(this.ApplicationName);
             var events = eventsEnumerable.ToList();
@@ -161,6 +159,11 @@ namespace Serilog.Sinks.NewRelic.Logs
             }
 
             return json.ToString();
+        }
+
+        public Task OnEmptyBatchAsync()
+        {
+            return Task.CompletedTask;
         }
     }
 }
